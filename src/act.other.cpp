@@ -3175,6 +3175,11 @@ ACMD(do_photo)
     if (!found) {
       // Look for a targeted person.
       if (found_ch) {
+        // you can't take a photo of yourself with cybereye cameras
+        if ((found_ch == ch) && mem) {
+          send_to_char(ch, "Your eyes don't roll back in your head far enough to photograph yourself.\r\n");
+          return;
+        }
         // This does not cause info disclosure because generic_find respects CAN_SEE().
         if (AFF_FLAGGED(found_ch, AFF_IMP_INVIS) || AFF_FLAGGED(found_ch, AFF_SPELLIMPINVIS)) {
           send_to_char(ch, "You don't seem to see them through the viewfinder.\r\n");
