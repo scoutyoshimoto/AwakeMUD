@@ -842,6 +842,16 @@ void update_buildrepair(void)
         CH->char_specials.timer = 0;
         STOP_WORKING(CH);
       } else if (AFF_FLAGGED(CH, AFF_AMMOBUILD) && --GET_AMMOBOX_TIME_TO_COMPLETION(PROG) < 1) {
+        if (get_and_deduct_one_crafting_token_from_char(CH)) {
+          send_to_char("A crafting token fuzzes into digital static, greatly accelerating the building time.\r\n", CH);
+          // Exchange one token for 1000 rounds, or two to complete a max-size box
+          GET_AMMOBOX_QUANTITY(PROG) += MIN(GET_AMMOBOX_INTENDED_QUANTITY(PROG), 1000);
+          AMMOTRACK_OK(GET_AMMOBOX_WEAPON(PROG), GET_AMMOBOX_TYPE(PROG), AMMOTRACK_CRAFTING, AMMOBUILD_BATCH_SIZE);
+
+          // Add the weight of the completed ammo to the box. Due to some ammo having miniscule weight, we must fully re-calc every time.
+          weight_change_object(PROG, -GET_OBJ_WEIGHT(PROG));
+          weight_change_object(PROG, get_ammo_weight(GET_AMMOBOX_WEAPON(PROG), GET_AMMOBOX_TYPE(PROG), GET_AMMOBOX_QUANTITY(PROG), CH));
+        }
         if (GET_AMMOBOX_TIME_TO_COMPLETION(PROG) <= -2) { // --(-1) = -2; prevents penalizing people who ace the test.
           switch(number(1,18)) {
             case 1:
