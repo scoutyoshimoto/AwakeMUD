@@ -2077,7 +2077,7 @@ void look_in_veh(struct char_data * ch)
     }
     if (!ch->vfront) {
       CCHAR = "^y";
-      list_veh_to_char(ch->in_veh->carriedvehs, ch);
+      list_veh_to_char(ch->in_veh->carriedvehs, ch, FALSE);
     }
   }
   if (!ch->in_room || PLR_FLAGGED(ch, PLR_REMOTE))
@@ -2106,7 +2106,7 @@ void look_in_veh(struct char_data * ch)
       list_char_to_char(veh->in_veh->people, ch);
       ch->vfront = ov;
       CCHAR = "^y";
-      list_veh_to_char(veh->in_veh->carriedvehs, ch);
+      list_veh_to_char(veh->in_veh->carriedvehs, ch, FALSE);
     } else {
       display_room_name(ch, veh->in_room, TRUE);
 
@@ -2132,7 +2132,7 @@ void look_in_veh(struct char_data * ch)
       list_obj_to_char(veh->in_room->contents, ch, SHOW_MODE_ON_GROUND, FALSE, TRUE);
       list_char_to_char(veh->in_room->people, ch);
       CCHAR = "^y";
-      list_veh_to_char(veh->in_room->vehicles, ch);
+      list_veh_to_char(veh->in_room->vehicles, ch, FALSE);
       if (PLR_FLAGGED(ch, PLR_REMOTE))
         ch->in_room = was_in;
       else
@@ -2476,9 +2476,9 @@ void look_at_room(struct char_data * ch, int ignore_brief, int is_quicklook)
   list_char_to_char(ch->in_room->people, ch);
   CCHAR = "^y";
   if (!is_quicklook && (ignore_brief || !PRF_FLAGGED(ch, PRF_BRIEF))) {
-    list_veh_to_char(ch->in_room->vehicles, ch);
+    list_veh_to_char(ch->in_room->vehicles, ch, FALSE);
   } else {
-    
+    list_veh_to_char(ch->in_room->vehicles, ch, TRUE);
   }
 }
 
