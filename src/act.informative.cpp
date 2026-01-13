@@ -492,8 +492,15 @@ void show_obj_to_char(struct obj_data * object, struct char_data * ch, int mode)
 
 }
 
-void show_veh_to_char(struct veh_data * vehicle, struct char_data * ch)
+void show_veh_to_char(struct veh_data * vehicle, struct char_data * ch, bool brief)
 {
+  bool owned;
+  if (brief) {
+    return;
+  } else {
+    owned = vehicle->owner && GET_IDNUM(ch) == vehicle->owner;
+  }
+
   *buf = '\0';
 
   strlcpy(buf, CCHAR ? CCHAR : "", sizeof(buf));
@@ -571,18 +578,45 @@ void show_veh_to_char(struct veh_data * vehicle, struct char_data * ch)
   if (vehicle->rigger) {
     snprintf(ENDOF(buf), sizeof(buf) - strlen(buf), " (Rigged by %s^y)", GET_CHAR_NAME(vehicle->rigger));
   }
-  if (vehicle->owner && GET_IDNUM(ch) == vehicle->owner)
+  if (owned)
     strlcat(buf, " ^Y(Yours)", sizeof(buf));
   strlcat(buf, "^N\r\n", sizeof(buf));
   send_to_char(buf, ch);
 }
 
-void list_veh_to_char(struct veh_data * list, struct char_data * ch)
+void list_veh_to_char(struct veh_data * list, struct char_data * ch, bool brief)
 {
   struct veh_data *i;
+  int bikes;
+  int cars;
+  int trucks;
+  int hovercraft;
+  int rotorcraft;
+  int planes;
+  int blimps;
+  int drones;
+
+  *buf = '\0';
+
   for (i = list; i; i = i->next_veh) {
     if (ch->in_veh != i && ch->char_specials.rigging != i)
-      show_veh_to_char(i, ch);
+      show_veh_to_char(i, ch, brief);
+      if (i->type == VEH_BIKE)
+        bikes++;
+      if (i->type == VEH_CAR)
+        cars++;
+      if (i->type == VEH_TRUCK)
+        trucks++;
+      if (i->type == VEH_HOVERCRAFT)
+        hovercraft++;
+      if (i->type == VEH_ROTORCRAFT)
+        rotorcraft++;
+      if (i->type == VEH_FIXEDWING)
+        planes++;
+      if (i->type == VEH_LTA)
+        blimps++;
+      if (i->type == VEH_DRONE)
+        drones++;
 
     if (i == i->next_veh) {
       char errbuf[1000];
@@ -594,6 +628,11 @@ void list_veh_to_char(struct veh_data * list, struct char_data * ch)
       i->next_veh = NULL;
       mudlog(errbuf, ch, LOG_SYSLOG, TRUE);
       break;
+    }
+    if (PRF_FLAGGED(ch, PRF_BRIEF)) {
+      int brief_vehicles = bikes + cars + trucks + hovercraft + rotorcraft + planes + blimps + drones;
+      snprintf(buf, sizeof(buf), "There are %d additional vehicles here.\r\n", brief_vehicles);
+      send_to_char(buf, ch);
     }
   }
 }
@@ -2436,7 +2475,11 @@ void look_at_room(struct char_data * ch, int ignore_brief, int is_quicklook)
   list_obj_to_char(ch->in_room->contents, ch, SHOW_MODE_ON_GROUND, FALSE, TRUE);
   list_char_to_char(ch->in_room->people, ch);
   CCHAR = "^y";
-  list_veh_to_char(ch->in_room->vehicles, ch);
+  if (!is_quicklook && (ignore_brief || !PRF_FLAGGED(ch, PRF_BRIEF))) {
+    list_veh_to_char(ch->in_room->vehicles, ch);
+  } else {
+    
+  }
 }
 
 void peek_into_adjacent(struct char_data * ch, int dir)
