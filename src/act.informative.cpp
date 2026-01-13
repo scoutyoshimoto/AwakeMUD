@@ -494,12 +494,10 @@ void show_obj_to_char(struct obj_data * object, struct char_data * ch, int mode)
 
 void show_veh_to_char(struct veh_data * vehicle, struct char_data * ch, bool brief)
 {
-  bool owned;
-  if (brief) {
+  bool owned = vehicle->owner && GET_IDNUM(ch) == vehicle->owner;
+  
+  if (brief && !owned)
     return;
-  } else {
-    owned = vehicle->owner && GET_IDNUM(ch) == vehicle->owner;
-  }
 
   *buf = '\0';
 
@@ -587,14 +585,14 @@ void show_veh_to_char(struct veh_data * vehicle, struct char_data * ch, bool bri
 void list_veh_to_char(struct veh_data * list, struct char_data * ch, bool brief)
 {
   struct veh_data *i;
-  int bikes;
-  int cars;
-  int trucks;
-  int hovercraft;
-  int rotorcraft;
-  int planes;
-  int blimps;
-  int drones;
+  int bikes = 0;
+  int cars = 0;
+  int trucks = 0;
+  int hovercraft = 0;
+  int rotorcraft = 0;
+  int planes = 0;
+  int blimps = 0;
+  int drones = 0;
 
   *buf = '\0';
 
@@ -629,11 +627,11 @@ void list_veh_to_char(struct veh_data * list, struct char_data * ch, bool brief)
       mudlog(errbuf, ch, LOG_SYSLOG, TRUE);
       break;
     }
-    if (PRF_FLAGGED(ch, PRF_BRIEF)) {
-      int brief_vehicles = bikes + cars + trucks + hovercraft + rotorcraft + planes + blimps + drones;
-      snprintf(buf, sizeof(buf), "There are %d additional vehicles here.\r\n", brief_vehicles);
-      send_to_char(buf, ch);
-    }
+  }
+  if (PRF_FLAGGED(ch, PRF_BRIEF)) {
+    int brief_vehicles = bikes + cars + trucks + hovercraft + rotorcraft + planes + blimps + drones;
+    snprintf(buf, sizeof(buf), "There are %d additional vehicles here.\r\n", brief_vehicles);
+    send_to_char(buf, ch);
   }
 }
 
