@@ -580,7 +580,20 @@ void show_veh_to_char(struct veh_data * vehicle, struct char_data * ch)
 void list_veh_to_char(struct veh_data * list, struct char_data * ch)
 {
   struct veh_data *i;
+  int c;
+
   for (i = list; i; i = i->next_veh) {
+    if (PLR_FLAGGED(ch, PRF_BRIEF)) {
+      if (i->owner && GET_IDNUM(ch) == i->owner) {
+        show_veh_to_char(i, ch);
+      } else {
+        c++;
+      }
+      send_to_char(ch, "There are %d additional vehicles here.\r\n");
+      if (PLR_FLAGGED(ch, PRF_SEE_TIPS)) {
+        send_to_char(ch, "^L[OOC: The full vehicle list was suppressed by BRIEF mode, use ^WLOOK^n to see it.]^n\r\n");
+      }
+    }
     if (ch->in_veh != i && ch->char_specials.rigging != i)
       show_veh_to_char(i, ch);
 
