@@ -1978,9 +1978,16 @@ ACMD(do_get)
 	}
 
 	cont_dotmode = find_all_dots(arg2, sizeof(arg2));
-	if (cont_dotmode == FIND_INDIV)
+	if (cont_dotmode == (FIND_INDIV || FIND_GROUND || FIND_INV))
 	{
-		mode = generic_find(arg2, FIND_OBJ_EQUIP | FIND_OBJ_INV | FIND_OBJ_ROOM, ch, &tmp_char, &cont);
+		switch (cont_dotmode) {
+		  case FIND_GROUND:
+		    mode = generic_find(arg2, FIND_OBJ_ROOM, ch, &tmp_char, &cont);
+		  case FIND_INV:
+		    mode = generic_find(arg2, FIND_OBJ_INV, ch, &tmp_char, &cont);
+		  default:
+			mode = generic_find(arg2, FIND_OBJ_EQUIP | FIND_OBJ_INV | FIND_OBJ_ROOM, ch, &tmp_char, &cont);
+		}
 		if (!ch->in_veh || (ch->in_veh->flags.IsSet(VFLAG_WORKSHOP) && !ch->vfront))
 			veh = get_veh_list(arg2, ch->in_veh ? ch->in_veh->carriedvehs : ch->in_room->vehicles, ch);
 		if (cyberdeck && veh)

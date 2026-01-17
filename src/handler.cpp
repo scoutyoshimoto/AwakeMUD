@@ -3717,6 +3717,16 @@ int find_all_dots(char *arg, size_t arg_size)
 {
   if (!strcmp(arg, "all"))
     return FIND_ALL;
+  else if (!strncmp(arg, "g.", 2)) {
+    strlcpy(buf, arg + 2, sizeof(buf));
+    strlcpy(arg, buf, arg_size);
+    return FIND_GROUND;
+  }
+  else if (!strncmp(arg, "i.", 2)) {
+    strlcpy(buf, arg + 2, sizeof(buf));
+    strlcpy(arg, buf, arg_size);
+    return FIND_INV;
+  }
   else if (!strncmp(arg, "all.", 4)) {
     strlcpy(buf, arg + 4, sizeof(buf));
     strlcpy(arg, buf, arg_size);

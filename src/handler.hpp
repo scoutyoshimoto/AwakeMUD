@@ -111,7 +111,8 @@ int     find_all_dots(char *arg, size_t arg_size);
 #define FIND_INDIV      0
 #define FIND_ALL        1
 #define FIND_ALLDOT     2
-
+#define FIND_GROUND     3
+#define FIND_INV        4
 
 /* Generic Find */
 
