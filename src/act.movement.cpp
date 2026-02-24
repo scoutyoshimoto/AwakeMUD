@@ -1330,8 +1330,8 @@ const int flags_door[] =
   };
 
 #define EXITN(room, door)               ((room)->dir_option[door])
-#define OPEN_DOOR(room, obj, door)      (!(obj) ? (TOGGLE_BIT(EXITN(room, door)->exit_info, EX_CLOSED))) : (TOGGLE_BIT(GET_OBJ_VAL(obj, 1), CONT_CLOSED))
-#define LOCK_DOOR(room, obj, door)      (!(obj) ? (TOGGLE_BIT(EXITN(room, door)->exit_info, EX_LOCKED))) : (TOGGLE_BIT(GET_OBJ_VAL(obj, 1), CONT_LOCKED))
+#define OPEN_DOOR(room, obj, door)      (!(obj) ? (TOGGLE_BIT(EXITN(room, door)->exit_info, EX_CLOSED)) : (TOGGLE_BIT(GET_OBJ_VAL(obj, 1), CONT_CLOSED)))
+#define LOCK_DOOR(room, obj, door)      (!(obj) ? (TOGGLE_BIT(EXITN(room, door)->exit_info, EX_LOCKED)) : (TOGGLE_BIT(GET_OBJ_VAL(obj, 1), CONT_LOCKED)))
 
 #define DOOR_IS_OPENABLE(ch, obj, door) ((obj) ? ((GET_OBJ_TYPE(obj) == ITEM_CONTAINER) && (IS_SET(GET_OBJ_VAL(obj, 1), CONT_CLOSEABLE))) : (IS_SET(EXIT(ch, door)->exit_info, EX_ISDOOR) && !IS_SET(EXIT(ch, door)->exit_info, EX_DESTROYED) && !IS_SET(EXIT(ch, door)->exit_info, EX_HIDDEN)))
 #define DOOR_IS_OPEN(ch, obj, door)     ((obj) ? (!IS_SET(GET_OBJ_VAL(obj, 1), CONT_CLOSED)) : (!IS_SET(EXIT(ch, door)->exit_info, EX_CLOSED)))
