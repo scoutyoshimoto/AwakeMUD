@@ -1377,10 +1377,10 @@ void do_doorcmd(struct char_data *ch, struct obj_data *obj, int door, int scmd, 
     if (back)
       OPEN_DOOR(other_room, obj, rev_dir[door]);
     if (print_message) {
-      if (obj)
-        send_to_char(ch, "You %s %s.\r\n", scmd == SCMD_OPEN ? "open" : "close", GET_OBJ_NAME(obj));
-      else
+      if (!obj)
         send_to_char(ch, "You %s the %s to %s.\r\n", scmd == SCMD_OPEN ? "open" : "close", GET_DOOR_NAME(ch, door), thedirs[door]);
+      else
+        send_to_char(ch, "You %s %s.\r\n", scmd == SCMD_OPEN ? "open" : "close", GET_OBJ_NAME(obj));
     }
     if (!obj) {
       // Update last open/close interaction time.
@@ -1410,21 +1410,21 @@ void do_doorcmd(struct char_data *ch, struct obj_data *obj, int door, int scmd, 
     }
     break;
   case SCMD_KNOCK:
-    if (obj) {
-      send_to_char(ch, "You knock experimentally on %s, but nothing happens.\r\n", GET_OBJ_NAME(obj));
-      return;
+    if (!obj) {
+      send_to_char(ch, "You knock on the %s to %s.\r\n", GET_DOOR_NAME(ch, door), thedirs[door]);
+      break;
     }
-    send_to_char(ch, "You knock on the %s to %s.\r\n", GET_DOOR_NAME(ch, door), thedirs[door]);
-    break;
+    send_to_char(ch, "You knock experimentally on %s, but nothing happens.\r\n", GET_OBJ_NAME(obj));
+    return;
   }
 
   /* Notify the room */
-  if (obj) {
-    snprintf(ENDOF(buf), sizeof(buf) - strlen(buf), "$p.");
-  } else {
+  if (!obj) {
     snprintf(ENDOF(buf), sizeof(buf) - strlen(buf), "the %s to %s.",
-            EXIT(ch, door)->keyword ? "$F" : "door",
-            thedirs[door]);
+        EXIT(ch, door)->keyword ? "$F" : "door",
+        thedirs[door]);
+  } else {
+    snprintf(ENDOF(buf), sizeof(buf) - strlen(buf), "$p.");
   }
 
   if (!(obj) || (obj->in_room))
@@ -1631,10 +1631,10 @@ ACMD(do_gen_door)
     // Can't open it? Give a proper message.
     if (!(DOOR_IS_OPENABLE(ch, obj, door))) {
       char temp[50];
-      if (obj) {
-        snprintf(temp, sizeof(temp), "You can't %s $p.", cmd_door[subcmd]);
-      } else {
+      if (!obj) {
         snprintf(temp, sizeof(temp), "You can't %s the %s to %s.", cmd_door[subcmd], GET_DOOR_NAME(ch, door), thedirs[door]);
+      } else {
+        snprintf(temp, sizeof(temp), "You can't %s $p.", cmd_door[subcmd]);
       }
       act(temp, FALSE, ch, obj, 0, TO_CHAR);
       return;
@@ -1642,27 +1642,27 @@ ACMD(do_gen_door)
 
     // Trying to close it when it's already closed.
     if (!DOOR_IS_OPEN(ch, obj, door) && IS_SET(flags_door[subcmd], NEED_OPEN)) {
-      if (obj)
-        send_to_char(ch, "%s is already closed!\r\n", capitalize(GET_OBJ_NAME(obj)));
-      else
+      if (!obj)
         send_to_char(ch, "The %s to %s is already closed!\r\n", GET_DOOR_NAME(ch, door), thedirs[door]);
+      else
+        send_to_char(ch, "%s is already closed!\r\n", capitalize(GET_OBJ_NAME(obj)));
       return;
     }
 
     // Almost anything you can do to a door (except close it) fails if it's open.
     if (!DOOR_IS_CLOSED(ch, obj, door) && IS_SET(flags_door[subcmd], NEED_CLOSED)) {
-      if (obj)
-        send_to_char(ch, "%s is already open!\r\n", capitalize(GET_OBJ_NAME(obj)));
-      else
+      if (!obj)
         send_to_char(ch, "But the %s to %s is already open...\r\n", GET_DOOR_NAME(ch, door), thedirs[door]);
+      else
+        send_to_char(ch, "%s is already open!\r\n", capitalize(GET_OBJ_NAME(obj)));
       return;
     }
 
     if (!(DOOR_IS_LOCKED(ch, obj, door)) && IS_SET(flags_door[subcmd], NEED_LOCKED)) {
-      if (obj)
-        send_to_char(ch, "%s isn't locked.\r\n", capitalize(GET_OBJ_NAME(obj)));
+      if (!obj)
+        send_to_char(ch, "The %s to %s isn't locked.\r\n", GET_DOOR_NAME(ch, door), thedirs[door]);  
       else
-        send_to_char(ch, "The %s to %s isn't locked.\r\n", GET_DOOR_NAME(ch, door), thedirs[door]);
+        send_to_char(ch, "%s isn't locked.\r\n", capitalize(GET_OBJ_NAME(obj)));
       return;
     }
 
@@ -1670,7 +1670,7 @@ ACMD(do_gen_door)
       if (subcmd == SCMD_OPEN) {
         // Trying to open a locked thing without the key.
         if (!(has_key(ch, keynum) || access_level(ch, LVL_ADMIN))) {
-          if (obj)
+          if (!obj)
             send_to_char(ch, "You can't open %s-- it's locked and you don't have the proper key.\r\n", GET_OBJ_NAME(obj));
           else
             send_to_char(ch, "You can't open the %s to %s-- it's locked and you don't have the proper key.\r\n", GET_DOOR_NAME(ch, door), thedirs[door]);
@@ -1678,19 +1678,19 @@ ACMD(do_gen_door)
         }
         // They're trying to open a locked thing with the key.
         else {
-          if (obj)
-            send_to_char(ch, "You unlock and open %s.\r\n", GET_OBJ_NAME(obj));
-          else
+          if (!obj)
             send_to_char(ch, "You unlock and open the %s to %s.\r\n", GET_DOOR_NAME(ch, door), thedirs[door]);
+          else
+            send_to_char(ch, "You unlock and open %s.\r\n", GET_OBJ_NAME(obj));
           do_doorcmd(ch, obj, door, subcmd, FALSE);
           return;
         }
       } else {
         // They're trying to lock it.
-        if (obj)
-          send_to_char(ch, "%s is already locked.\r\n", capitalize(GET_OBJ_NAME(obj)));
-        else
+        if (!obj)
           send_to_char(ch, "The %s to %s is already locked.\r\n", GET_DOOR_NAME(ch, door), thedirs[door]);
+        else
+          send_to_char(ch, "%s is already locked.\r\n", capitalize(GET_OBJ_NAME(obj)));
         return;
       }
     }
