@@ -1518,13 +1518,16 @@ ACMD(do_gen_door)
   }
 
   // If it's a cardinal direction, check for a door.
-  /* for (int dir_idx = NORTH; dir_idx <= DOWN; dir_idx++) {
+  for (int dir_idx = NORTH; dir_idx <= DOWN; dir_idx++) {
     if (!str_cmp(type, exit_dirs[dir_idx]) || !str_cmp(type, fulldirs[dir_idx])) {
-      asdf hidden destroyed
       door = dir_idx;
       break;
     }
-  } */
+    if ((door = find_door(ch, type, dir, cmd_door[subcmd])) == -1) {
+      // Already gave an error message in find_door, bail out.
+      return;
+    }
+  }
 
   // Check for an object or vehicle nearby that matches the keyword.
   if (!generic_find(type, FIND_OBJ_EQUIP | FIND_OBJ_INV | FIND_OBJ_ROOM, ch, &victim, &obj)
