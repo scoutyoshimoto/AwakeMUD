@@ -1046,7 +1046,7 @@ void award_follower_payout(struct char_data *follower, int karma, int nuyen, str
                   GET_IDNUM(questor));
 }
 
-void reward(struct char_data *ch, struct char_data *johnson)
+void reward(struct char_data *ch, struct char_data *johnson, bool remote)
 {
   if (vnum_from_non_approved_zone(quest_table[GET_QUEST(ch)].vnum)) {
 #ifdef IS_BUILDPORT
@@ -1121,7 +1121,7 @@ void reward(struct char_data *ch, struct char_data *johnson)
 
     // You also only get the object reward for completing all objectives.
     rnum_t rnum = real_object(quest_table[GET_QUEST(ch)].reward);
-    if (rnum > 0) {
+    if (!remote && rnum > 0) {
       obj = read_object(rnum, REAL, OBJ_LOAD_REASON_QUEST_REWARD);
 
       // Check to see if they have it on them already.
@@ -1158,6 +1158,9 @@ void reward(struct char_data *ch, struct char_data *johnson)
   }
 
   nuyen = negotiate(ch, johnson, 0, nuyen, 0, FALSE, FALSE) * NUYEN_GAIN_MULTIPLIER * ((float) GET_CHAR_MULTIPLIER(ch) / 100);
+
+  // Apply the remote tax
+  nuyen = nuyen * (remote ? REMOTE_QUEST_REWARD_TAX : 1.0);
 
   // If you're grouped, distribute the karma and nuyen equally.
   if (AFF_FLAGGED(ch, AFF_GROUP)) {
@@ -1671,7 +1674,7 @@ SPECIAL(johnson)
           mudlog(buf, ch, LOG_SYSLOG, TRUE);
           do_say(johnson, "Well done.", 0, 0);
         }
-        reward(ch, johnson);
+        reward(ch, johnson, FALSE);
         forget(johnson, ch);
 
         if (GET_QUEST(ch) == QST_MAGE_INTRO && GET_TRADITION(ch) != TRAD_MUNDANE)
@@ -3932,7 +3935,7 @@ ACMD(do_endrun) {
       if (phone) {
         send_to_char(ch, "You call your Johnson, and after a short wait the phone is picked up.\r\n"
                          "^Y%s on the other end of the line says, \"%s\"^n\r\n"
-                         "With your run abandoned, you hang up the phone.\r\n",
+                         "With your run completed, you hang up the phone.\r\n",
                          GET_CHAR_NAME(johnson),
                          quest_table[GET_QUEST(ch)].quit);
         if (ch->in_room)
@@ -3944,6 +3947,62 @@ ACMD(do_endrun) {
         forget(johnson, ch);
       } else if (ch->in_room && ch->in_room == johnson->in_room) {
         attempt_quit_job(ch, johnson);
+      } else {
+        send_to_char(ch, "You'll either need to head back and talk to %s^n in person or get a phone you can use to call %s.\r\n", GET_CHAR_NAME(johnson), HMHR(johnson));
+      }
+      return;
+    }
+  }
+
+  // Error case.
+  mudlog("SYSERR: Attempted remote job termination, but the Johnson could not be found!", ch, LOG_SYSLOG, TRUE);
+  send_to_char("You dial your phone, but something's up with the connection, and you can't get through.\r\n", ch);
+}
+
+// Remotely end a run (with caveats). Requires a phone.
+ACMD(do_finishrun) {
+  struct obj_data *phone = NULL;
+
+  // Must be on a quest.
+  FAILURE_CASE(!GET_QUEST(ch), "But you're not on a run.");
+
+  // Must type the whole command.
+  FAILURE_CASE(subcmd == SCMD_QUI, "You must type the whole ^WFINISHRUN^n command to finish your job.");
+
+  // Must have a phone.
+  for (phone = ch->carrying; phone; phone = phone->next_content)
+    if (GET_OBJ_TYPE(phone) == ITEM_PHONE)
+      break;
+  // Worn phones are OK.
+  if (!phone)
+    for (int x = 0; !phone && x < NUM_WEARS; x++)
+      if (GET_EQ(ch, x) && GET_OBJ_TYPE(GET_EQ(ch, x)) == ITEM_PHONE)
+        phone = GET_EQ(ch, x);
+  // Cyberware phones are fine.
+  if (!phone)
+    for (phone = ch->cyberware; phone; phone = phone->next_content)
+      if (GET_OBJ_VAL(phone, 0) == CYB_PHONE)
+        break;
+
+  // Finish the quest.
+  for (struct char_data *johnson = character_list; johnson; johnson = johnson->next_in_character_list) {
+    if (ch->in_room && ch->in_room == johnson->in_room) {
+        attempt_quit_job(ch, johnson);
+    } else if (IS_NPC(johnson) && (GET_MOB_VNUM(johnson) == quest_table[GET_QUEST(ch)].johnson)) {
+      if (phone) {
+        send_to_char(ch, "You call your Johnson, and after a short wait the phone is picked up.\r\n"
+                         "^Y%s on the other end of the line says, \"%s\"^n\r\n"
+                         "With your run completed, you hang up the phone.\r\n",
+                         GET_CHAR_NAME(johnson),
+                         quest_table[GET_QUEST(ch)].finish);
+        if (ch->in_room)
+          act("$n makes a brief phone call to $s Johnson to complete $s current run. Lazy.", FALSE, ch, 0, 0, TO_ROOM);
+        snprintf(buf, sizeof(buf), "$z's phone rings. $e answers, listens for a moment, then says into it, \"%s\"", quest_table[GET_QUEST(ch)].finish);
+        act(buf, FALSE, johnson, NULL, NULL, TO_ROOM);
+
+        // TRUE here will trigger the remote tax, and skip any object reward
+        reward(ch, johnson, TRUE);
+        forget(johnson, ch);
       } else {
         send_to_char(ch, "You'll either need to head back and talk to %s^n in person or get a phone you can use to call %s.\r\n", GET_CHAR_NAME(johnson), HMHR(johnson));
       }

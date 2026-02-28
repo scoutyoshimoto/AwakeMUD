@@ -235,6 +235,7 @@ ACMD_DECLARE(do_exdesc);
 ACMD_DECLARE(do_exit);
 ACMD_DECLARE(do_exits);
 ACMD_DECLARE(do_factions);
+ACMD_DECLARE(do_finishrun);
 ACMD_DECLARE(do_flee);
 ACMD_DECLARE(do_flip);
 ACMD_DECLARE(do_flyto);
@@ -621,6 +622,7 @@ struct command_info cmd_info[] =
     { "combine"    , POS_RESTING , do_put      , 0, 0, BLOCKS_IDLE_REWARD },
     { "comegetme"  , POS_DEAD    , do_dw_retrieve, 0, 0, BLOCKS_IDLE_REWARD },
     { "complete"   , POS_LYING   , do_recap    , 0, 0, BLOCKS_IDLE_REWARD },
+    { "completerun", POS_RESTING,  do_completerun, 0, SCMD_}
     { "copy"       , POS_SITTING , do_copy     , 0, 0, BLOCKS_IDLE_REWARD },
     { "copyover"   , POS_DEAD    , do_copyover , LVL_ADMIN, 0, BLOCKS_IDLE_REWARD },
     { "commands"   , POS_DEAD    , do_commands , 0, SCMD_COMMANDS, ALLOWS_IDLE_REWARD },
@@ -701,6 +703,8 @@ struct command_info cmd_info[] =
     { "forget"     , POS_DEAD    , do_forget   , 0, 0, BLOCKS_IDLE_REWARD },
     { "fill"       , POS_SITTING , do_pour     , 0, SCMD_FILL, BLOCKS_IDLE_REWARD },
     { "finger"     , POS_DEAD    , do_last     , 0, SCMD_FINGER, ALLOWS_IDLE_REWARD },
+    { "finishru"   , POS_RESTING,  do_finishrun, 0, SCMD_QUI, BLOCKS_IDLE_REWARD }, 
+    { "finishrun"  , POS_RESTING,  do_finishrun, 0, SCMD_QUIT, BLOCKS_IDLE_REWARD }, 
     { "fix"        , POS_SITTING , do_repair   , 0, 0, BLOCKS_IDLE_REWARD },
     { "flee"       , POS_FIGHTING, do_flee     , 0, 0, BLOCKS_IDLE_REWARD },
     { "flip"       , POS_SITTING , do_flip     , 0, 0, BLOCKS_IDLE_REWARD },
