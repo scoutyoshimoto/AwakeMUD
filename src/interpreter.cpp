@@ -622,7 +622,6 @@ struct command_info cmd_info[] =
     { "combine"    , POS_RESTING , do_put      , 0, 0, BLOCKS_IDLE_REWARD },
     { "comegetme"  , POS_DEAD    , do_dw_retrieve, 0, 0, BLOCKS_IDLE_REWARD },
     { "complete"   , POS_LYING   , do_recap    , 0, 0, BLOCKS_IDLE_REWARD },
-    { "completerun", POS_RESTING,  do_completerun, 0, SCMD_}
     { "copy"       , POS_SITTING , do_copy     , 0, 0, BLOCKS_IDLE_REWARD },
     { "copyover"   , POS_DEAD    , do_copyover , LVL_ADMIN, 0, BLOCKS_IDLE_REWARD },
     { "commands"   , POS_DEAD    , do_commands , 0, SCMD_COMMANDS, ALLOWS_IDLE_REWARD },
