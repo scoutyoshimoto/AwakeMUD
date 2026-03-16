@@ -691,6 +691,15 @@ void send_echo_to_char(struct char_data *actor, struct char_data *viewer, const 
   // Add a newline.
   strlcat(mutable_echo_string, "\r\n", sizeof(mutable_echo_string));
 
+  // Prepend a kinesics to kemotes
+  if (subcmd == SCMD_KEMOTE) {
+    if (echo_string[0] == '\'' && echo_string[1] == 's') {
+      snprintf(mutable_echo_string, sizeof(mutable_echo_string), "(Kinesics) @self%s", echo_string);
+    } else {
+      snprintf(mutable_echo_string, sizeof(mutable_echo_string), "(Kinesics) @self %s", echo_string);
+    }
+  }
+
   // Finally(!), send it to the viewer.
   send_to_char(viewer, capitalize(mutable_echo_string));
 
@@ -719,9 +728,10 @@ ACMD(do_new_echo) {
 
   // Check for adepts using thier kinesics powers
   if (subcmd == SCMD_KEMOTE) {
-    FAILURE_CASE(!(GET_TRADITION(ch) == TRAD_ADEPT), "You cannot use kinesics emotes unless you are an adept.\r\n");
-    FAILURE_CASE(GET_POWER(ch, ADEPT_KINESICS) == 0, "You cannot use kinesics emotes without activating kinesics.\r\n");
-    FAILURE_CASE(ch->desc && strchr(argument, '"') != NULL, "You cannot use speech in a kinesics emote.\r\n");
+    FAILURE_CASE(!(GET_TRADITION(ch) == TRAD_ADEPT), "You cannot use kinesics emotes unless you are an adept.");
+    FAILURE_CASE(GET_POWER(ch, ADEPT_KINESICS) == 0, "You cannot use kinesics emotes without activating kinesics.");
+    FAILURE_CASE(ch->desc && strchr(argument, '"') != NULL, "You cannot use speech in a kinesics emote.");
+    FAILURE_CASE(ch->desc && strlen(argument) > 80, "Kinesics emotes are limited to 80 characters or less.");
   }
 
   // Reject hitchers. They have no body and would break things.
@@ -932,29 +942,29 @@ ACMD(do_new_echo) {
     {
       send_echo_to_char(ch, viewer, (const char *) emote_buf, must_echo_with_name, subcmd, FALSE);
     }
+    // Send it to anyone who's rigging a vehicle here.
+    for (struct veh_data *veh = in_room ? in_room->vehicles : in_veh->carriedvehs;
+        veh;
+        veh = veh->next_veh)
+    {
+      if (veh->rigger) {
+        send_echo_to_char(ch, veh->rigger, (const char *) emote_buf, must_echo_with_name, subcmd, TRUE);
+      }
+
+      for (struct char_data *viewer = veh->people; viewer; viewer = viewer->next_in_veh) {
+        send_echo_to_char(ch, viewer, (const char *) emote_buf, must_echo_with_name, subcmd, FALSE);
+      }
+    }
   } else {
     // Kinesics emotes are only sent to adepts with kinesics activated
     for (struct char_data *viewer = in_room ? in_room->people : in_veh->people;
          viewer;
          viewer = in_room ? viewer->next_in_room : viewer->next_in_veh)
     {
-      if (GET_TRADITION(viewer) == TRAD_ADEPT && GET_POWER(viewer, ADEPT_KINESICS) > 0) {
+      // Staff can always see these, non-adept questors can see them but only if the adept has the hired flag
+      if ((GET_TRADITION(viewer) == TRAD_ADEPT && GET_POWER(viewer, ADEPT_KINESICS) || access_level(viewer, LVL_BUILDER) || (PRF_FLAGGED(ch, PRF_HIRED) && PRF_FLAGGED(viewer, PRF_QUESTOR)))) {
         send_echo_to_char(ch, viewer, (const char *) emote_buf, TRUE, subcmd, FALSE);
       }
-    }
-  }
-
-  // Send it to anyone who's rigging a vehicle here.
-  for (struct veh_data *veh = in_room ? in_room->vehicles : in_veh->carriedvehs;
-       veh;
-       veh = veh->next_veh)
-  {
-    if (veh->rigger) {
-      send_echo_to_char(ch, veh->rigger, (const char *) emote_buf, must_echo_with_name, subcmd, TRUE);
-    }
-
-    for (struct char_data *viewer = veh->people; viewer; viewer = viewer->next_in_veh) {
-      send_echo_to_char(ch, viewer, (const char *) emote_buf, must_echo_with_name, subcmd, FALSE);
     }
   }
 
