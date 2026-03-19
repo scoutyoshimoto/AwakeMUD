@@ -7845,13 +7845,7 @@ ACMD(do_destring)
 
 bool restring_with_args(struct char_data *ch, char *argument, bool using_sysp) {
   struct obj_data *obj;
-  bool using_token = false;
   half_chop(argument, arg, buf, sizeof(buf));
-
-  if (!str_cmp(arg, "token")) {
-    using_token = true;
-    half_chop(buf, arg, buf, sizeof(buf));
-  }
 
   if (!*arg) {
     send_to_char("Syntax: RESTRING <item> <new short description>\r\n", ch);
@@ -7947,7 +7941,7 @@ bool restring_with_args(struct char_data *ch, char *argument, bool using_sysp) {
     } else {
       send_to_char("You rewrite the restring, which is free during character generation.\r\n", ch);
     }
-  } else if (using_token && get_and_deduct_one_crafting_token_from_char(ch)) {
+  } else if (get_and_deduct_one_crafting_token_from_char(ch, "restringing")) {
       send_to_char(ch, "A crafting token fuzzes into digital static as it merges into %s, transforming it.\r\n", obj->text.name);
   } else {
     if (GET_KARMA(ch) < 250) {
