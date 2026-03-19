@@ -6042,7 +6042,7 @@ ACMD(do_who)
         strlcat(buf1, buf2, sizeof(buf1));
       }
 
-      if (GET_TKE(tch) <= NEWBIE_KARMA_THRESHOLD && !IS_SENATOR(tch) && !IS_PRESTIGE_CH(tch)) {
+      if (GET_TKE(tch) <= NEWBIE_KARMA_THRESHOLD && !IS_SENATOR(tch) && !(IS_PRESTIGE_CH(tch))) {
         strlcat(buf1, GET_TITLE(tch) ? " ^y(Newbie)^n" : "^y(Newbie)^n", sizeof(buf1));
       }
 
