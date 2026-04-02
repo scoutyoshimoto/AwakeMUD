@@ -3272,6 +3272,11 @@ ACMD(do_photo)
               continue;
             }
 
+            // Conceealed foci should not show in photos
+            if (GET_OBJ_TYPE(eq) == ITEM_FOCUS && IS_OBJ_STAT(eq, ITEM_EXTRA_CONCEALED_IN_EQ)) {
+              continue;
+            }
+
             snprintf(ENDOF(buf), sizeof(buf) - strlen(buf), "%s%s\r\n", where[j], GET_OBJ_NAME(GET_EQ(found_ch, j)));
           }
         found = TRUE;
