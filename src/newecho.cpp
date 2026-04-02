@@ -961,8 +961,9 @@ ACMD(do_new_echo) {
          viewer;
          viewer = in_room ? viewer->next_in_room : viewer->next_in_veh)
     {
-      // Staff can always see these, non-adept questors can see them but only if the adept has the hired flag
-      if ((GET_TRADITION(viewer) == TRAD_ADEPT && GET_POWER(viewer, ADEPT_KINESICS) || access_level(viewer, LVL_BUILDER) || (PRF_FLAGGED(ch, PRF_HIRED) && PRF_FLAGGED(viewer, PRF_QUESTOR)))) {
+      // Staff can always see these, non-adept questors can see them in the NERPcorpolis
+      if ((GET_TRADITION(viewer) == TRAD_ADEPT && GET_POWER(viewer, ADEPT_KINESICS)) || access_level(viewer, LVL_BUILDER) ||
+          (VNUM_IS_NERPCORPOLIS(GET_ROOM_VNUM(ch->in_room) && PRF_FLAGGED(viewer, PRF_QUESTOR)))) {
         send_echo_to_char(ch, viewer, (const char *) emote_buf, TRUE, subcmd, FALSE);
       }
     }
