@@ -713,6 +713,9 @@ ACMD(do_new_echo) {
   struct room_data *in_room = ch->in_room;
   struct veh_data *in_veh = ch->in_veh;
 
+  // Allow questors to understand all languages but only inside the NERPcorpolis suites
+  bool questor_override = VNUM_IS_NERPCORPOLIS(GET_ROOM_VNUM(ch->in_room)) && PLR_FLAGGED(ch, PRF_QUESTOR);
+
   // Reject vemoters without a vehicle.
   if (subcmd == SCMD_VEMOTE) {
     RIG_VEH(ch, veh);
@@ -871,8 +874,12 @@ ACMD(do_new_echo) {
       }
 
       if (GET_SKILL(ch, language_in_use) <= 0) {
-        send_to_char(ch, "You don't know how to speak %s.\r\n", skills[language_in_use].name);
-        return;
+        if (questor_override) {
+          continue;
+        } else {
+          send_to_char(ch, "You don't know how to speak %s.\r\n", skills[language_in_use].name);
+          return;
+        }
       }
 
       // Extract the spoken content and check it for length.
@@ -881,8 +888,13 @@ ACMD(do_new_echo) {
         *(ptr++) = storage_buf[i++];
       *ptr = '\0';
 
-      if (!has_required_language_ability_for_sentence(ch, storage_string, language_in_use))
-        return;
+      if (!has_required_language_ability_for_sentence(ch, storage_string, language_in_use)) {
+        if (questor_override) {
+          continue; 
+        } else {
+          return;
+        }
+      }
     }
   }
 

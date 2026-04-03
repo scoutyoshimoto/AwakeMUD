@@ -56,6 +56,7 @@ ACMD(do_say)
   struct char_data *tmp, *to = NULL;
 
   int language = !SKILL_IS_LANGUAGE(GET_LANGUAGE(ch)) ? SKILL_ENGLISH : GET_LANGUAGE(ch);
+  bool questor_override = FALSE;
 
   skip_spaces(&argument);
 
@@ -166,11 +167,14 @@ ACMD(do_say)
                   : GET_NAME(to)) : "someone");
       }
 
+      // Allow questors to understand all languages but only inside the NERPcorpolis suites
+      questor_override = VNUM_IS_NERPCORPOLIS(GET_ROOM_VNUM(tmp->in_room)) && PLR_FLAGGED(tmp, PRF_QUESTOR);
+
       snprintf(buf, sizeof(buf), "$z^n says%s in %s, \"%s%s%s^n\"",
               (to ? buf2 : ""),
-              (IS_NPC(tmp) || GET_SKILL(tmp, language) > 0) ? skills[language].name : "an unknown language",
+              (IS_NPC(tmp) || questor_override || (tmp, language) > 0) ? skills[language].name : "an unknown language",
               (PRF_FLAGGED(tmp, PRF_NOHIGHLIGHT) || PRF_FLAGGED(tmp, PRF_NOCOLOR)) ? "" : GET_CHAR_COLOR_HIGHLIGHT(ch),
-              capitalize(replace_too_long_words(tmp, ch, arg_known_size, language, GET_CHAR_COLOR_HIGHLIGHT(ch))),
+              capitalize(replace_too_long_words(tmp, ch, arg_known_size, questor_override ? 12 : language, GET_CHAR_COLOR_HIGHLIGHT(ch))),
               ispunct(get_final_character_from_string(arg_known_size)) ? "" : "."
             );
 
@@ -246,6 +250,8 @@ ACMD(do_exclaim)
     return;
 
   int language = !SKILL_IS_LANGUAGE(GET_LANGUAGE(ch)) ? SKILL_ENGLISH : GET_LANGUAGE(ch);
+  bool questor_override = FALSE;
+  
   if (!has_required_language_ability_for_sentence(ch, argument, language))
     return;
 
@@ -253,12 +259,15 @@ ACMD(do_exclaim)
        tmp;
        tmp = (ch->in_veh ? tmp->next_in_veh : tmp->next_in_room))
   {
+    // Allow questors to understand all languages but only inside the NERPcorpolis suites
+    questor_override = VNUM_IS_NERPCORPOLIS(GET_ROOM_VNUM(tmp->in_room)) && PLR_FLAGGED(tmp, PRF_QUESTOR);
+
     // Replicate act() in a way that lets us capture the message.
     if (can_send_act_to_target(ch, FALSE, NULL, NULL, tmp, TO_ROOM) && !IS_IGNORING(tmp, is_blocking_ic_interaction_from, ch)) {
       snprintf(buf, sizeof(buf), "$z^n exclaims in %s, \"%s%s!^n\"",
-               (IS_NPC(tmp) || GET_SKILL(tmp, language) > 0) ? skills[language].name : "an unknown language",
+               (IS_NPC(tmp) || questor_override || GET_SKILL(tmp, language) > 0) ? skills[language].name : "an unknown language",
                (PRF_FLAGGED(tmp, PRF_NOHIGHLIGHT) || PRF_FLAGGED(tmp, PRF_NOCOLOR)) ? "" : GET_CHAR_COLOR_HIGHLIGHT(ch),
-               capitalize(replace_too_long_words(tmp, ch, argument, language, GET_CHAR_COLOR_HIGHLIGHT(ch))));
+               capitalize(replace_too_long_words(tmp, ch, argument, questor_override ? 12 : language, GET_CHAR_COLOR_HIGHLIGHT(ch))));
 
       // They're a valid target, so send the message with a raw perform_act() call.
       store_message_to_history(tmp->desc, COMM_CHANNEL_SAYS, perform_act(buf, ch, NULL, NULL, tmp, FALSE));
