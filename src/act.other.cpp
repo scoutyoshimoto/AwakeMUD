@@ -3273,7 +3273,7 @@ ACMD(do_photo)
             }
 
             // Conceealed foci should not show in photos
-            if (GET_OBJ_TYPE(eq) == ITEM_FOCUS && IS_OBJ_STAT(eq, ITEM_EXTRA_CONCEALED_IN_EQ)) {
+            if (GET_OBJ_TYPE(found_eq) == ITEM_FOCUS && IS_OBJ_STAT(found_eq, ITEM_EXTRA_CONCEALED_IN_EQ)) {
               continue;
             }
 
