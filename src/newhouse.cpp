@@ -286,10 +286,10 @@ void save_all_apartments_and_storage_rooms() {
 }
 
 /*********** ApartmentComplex ************/
-ApartmentComplex::ApartmentComplex() : display_name(str_dup("Unnamed Complex")) { flags.Clear(); }
+ApartmentComplex::ApartmentComplex() : display_name(str_dup("Unnamed Complex")) { complex_flags.Clear(); }
 
 ApartmentComplex::ApartmentComplex(vnum_t landlord) {
-  flags.Clear();
+  complex_flags.Clear();
 
   landlord_vnum = landlord;
 
@@ -312,7 +312,7 @@ ApartmentComplex::ApartmentComplex(vnum_t landlord) {
 ApartmentComplex::ApartmentComplex(bf::path filename) :
   base_directory(filename)
 {
-  flags.Clear();
+  complex_flags.Clear();
 
   // Load info from <filename>/info
   {
@@ -325,7 +325,7 @@ ApartmentComplex::ApartmentComplex(bf::path filename) :
 
     // Parse out the flags, defaulting to no flags if the field is not set.
     std::string temp_flags = base_info.value("flags", std::string("0"));
-    flags.FromString(temp_flags.c_str());
+    complex_flags.FromString(temp_flags.c_str());
 
     if (real_mobile(landlord_vnum) < 0) {
       log_vfprintf("SYSERR: Landlord vnum %ld does not match up with a real NPC. Terminating.\r\n", landlord_vnum);
@@ -336,7 +336,7 @@ ApartmentComplex::ApartmentComplex(bf::path filename) :
     log_vfprintf(" -- Loaded apartment complex %s with landlord %ld.", display_name, landlord_vnum);
   }
 
-  // Load rooms
+  // Load apartments
   {
     bf::directory_iterator end_itr; // default construction yields past-the-end
     for (bf::directory_iterator itr(base_directory); itr != end_itr; ++itr) {
@@ -386,7 +386,7 @@ void ApartmentComplex::save() {
   base_info["display_name"] = std::string(display_name);
   base_info["landlord_vnum"] = landlord_vnum;
   base_info["editors"] = editors;
-  base_info["flags"] = flags.ToString();
+  base_info["flags"] = complex_flags.ToString();
 
   // Write it out.
   write_json_file(base_directory / COMPLEX_INFO_FILE_NAME, &base_info);
@@ -595,7 +595,7 @@ void ApartmentComplex::clone_from(ApartmentComplex *source, const char *invoker)
     }
   }
 
-  flags.FromString(source->flags.ToString());
+  complex_flags.FromString(source->complex_flags.ToString());
 
   landlord_vnum = source->landlord_vnum;
 
@@ -737,6 +737,8 @@ int ApartmentComplex::get_crap_count() {
 Apartment::Apartment() :
   shortname(NULL), name(NULL), full_name(NULL)
 {
+  apartment_flags.Clear();
+
   snprintf(buf, sizeof(buf), "unnamed-%ld", time(0));
   set_short_name(buf);
 
@@ -751,6 +753,7 @@ Apartment::Apartment(ApartmentComplex *complex, const char *new_name, vnum_t key
   atrium(new_atrium), key_vnum(key_vnum), owned_by_player(owner), paid_until(paid_until), complex(complex), lifestyle(new_lifestyle)
 {
   char tmp[1000];
+  apartment_flags.Clear();
 
   shortname = str_dup(new_name);
 
@@ -771,6 +774,8 @@ Apartment::Apartment(ApartmentComplex *complex, bf::path base_directory) :
 {
   // Load base info from <name>/info.
   {
+    apartment_flags.Clear();
+    
     log_vfprintf(" ---- Loading apartment base data for %s.", base_directory.filename().c_str());
     json base_info;
     _json_parse_from_file(base_directory / APARTMENT_INFO_FILE_NAME, base_info);
@@ -779,6 +784,10 @@ Apartment::Apartment(ApartmentComplex *complex, bf::path base_directory) :
     name = str_dup(base_info["name"].get<std::string>().c_str());
     lifestyle = base_info["lifestyle"].get<int>();
     nuyen_per_month = base_info["rent"].get<long>();
+
+    // Parse out the flags, defaulting to no flags if the field is not set.
+    std::string temp_flags = base_info.value("flags", std::string("0"));
+    apartment_flags.FromString(temp_flags.c_str());
 
     atrium = base_info["atrium"].get<vnum_t>();
     key_vnum = base_info["key"].get<vnum_t>();
@@ -947,6 +956,8 @@ void Apartment::clone_from(Apartment *source, const char *invoker) {
     guests.push_back(idnum);
   }
 
+  apartment_flags.FromString(source->apartment_flags.ToString());
+
   // Sanity check:
   assert(rooms.size() == source->rooms.size());
 }
@@ -1036,6 +1047,8 @@ void Apartment::save_base_info() {
 
   base_info["atrium"] = atrium;
   base_info["key"] = key_vnum;
+
+  base_info["flags"] = apartment_flags.ToString();
 
   // Write it out.
   write_json_file(base_directory / APARTMENT_INFO_FILE_NAME, &base_info);
@@ -1173,23 +1186,49 @@ void Apartment::break_lease() {
   save_lease();
 }
 
+// Search all rooms in this apartment to determine if the owner is present. Note: returns projections.
+struct char_data * Apartment::get_owner_if_present() {
+  if (owned_by_player) {
+    for (auto &subroom : rooms) {
+      struct room_data *room = subroom->get_world_room();
+
+      if (!room) {
+        mudlog_vfprintf(NULL, LOG_SYSLOG, "SYSERR: Failed to get_world_room() for subroom %ld of %s!", subroom->get_vnum(), get_full_name());
+        continue;
+      }
+      for (struct char_data *occupant = room->people; occupant; occupant = occupant->next_in_room) {
+        if (GET_IDNUM_EVEN_IF_PROJECTING(occupant) == owned_by_player) {
+          return occupant;
+        }
+      }
+    }
+  } else {
+    // TODO: Logic for owned_by_pgroup. Will return the first valid leaseholder.
+  }
+
+  return nullptr;
+}
+
 /* Check for entry permissions. */
 bool Apartment::can_enter(struct char_data *ch) {
   // NPC, but not a spirit or elemental? No entry.
   if (IS_NPC(ch) && !(IS_SPIRIT(ch) || IS_PC_CONJURED_ELEMENTAL(ch)))
     return FALSE;
 
-  // Admins and astral projections can enter any room.
-  if (GET_LEVEL(ch) >= LVL_ADMIN || IS_ASTRAL(ch))
-    return TRUE;
-
   // The lease must be paid up for guest / owner status to work. Fine if it's not leased though.
-  if ((owned_by_pgroup || owned_by_player) && get_paid_until() < time(0))
-    return access_level(ch, LVL_BUILDER);
+  if ((owned_by_pgroup || owned_by_player) && get_paid_until() < time(0)) {
+    if (access_level(ch, LVL_BUILDER)) {
+      send_to_char("(OOC: Entry to expired apartment allowed via automatic staff override. Please add a ^WCHEATLOG^n entry.)\r\n", ch);
+      mudlog_vfprintf(ch, LOG_WIZLOG, "%s entering expired-lease apartment via automatic staff override.", GET_CHAR_NAME(ch));
+      return TRUE;
+    }
+    return FALSE;
+  }
 
   // Offices can be entered by anyone.
-  if (complex->is_office())
-    return TRUE;
+  if (is_office()) {
+    return true;
+  }
 
   // Check for owner status or pgroup perms.
   if (owned_by_pgroup) {
@@ -1202,7 +1241,7 @@ bool Apartment::can_enter(struct char_data *ch) {
     }
     // Owned by a pgroup, but this ch does not have perms in it: Fall through.
   } else if (owned_by_player > 0) {
-    if (GET_IDNUM(ch) == owned_by_player)
+    if (GET_IDNUM_EVEN_IF_PROJECTING(ch) == owned_by_player)
       return TRUE;
     // Owned by a player, but not this one: Fall through.
   } else {
@@ -1213,16 +1252,15 @@ bool Apartment::can_enter(struct char_data *ch) {
 
   // Guests can enter any room.
   for (auto guest_idnum : guests) {
-    if (GET_IDNUM(ch) == guest_idnum)
+    if (GET_IDNUM_EVEN_IF_PROJECTING(ch) == guest_idnum)
       return TRUE;
   }
 
-#ifdef IS_BUILDPORT
-  if (GET_LEVEL(ch) >= LVL_BUILDER) {
-    send_to_char("(OOC: Entry allowed via staff override.)\r\n", ch);
+  if (access_level(ch, LVL_BUILDER)) {
+    send_to_char("(OOC: Entry allowed via automatic staff override. Please add a ^WCHEATLOG^n entry.)\r\n", ch);
+    mudlog_vfprintf(ch, LOG_WIZLOG, "%s entering apartment via automatic staff override.", GET_CHAR_NAME(ch));
     return TRUE;
   }
-#endif
 
   return FALSE;
 }
@@ -1239,7 +1277,7 @@ bool Apartment::can_enter_by_idnum(idnum_t idnum) {
     return get_player_rank(idnum) >= LVL_BUILDER;
 
   // Offices can be entered by anyone.
-  if (complex->is_office())
+  if (is_office())
     return TRUE;
 
   // Check for owner status or pgroup perms.
@@ -1280,7 +1318,7 @@ bool Apartment::create_or_extend_lease(struct char_data *ch) {
   int cost = nuyen_per_month;
 
   // Special case: Offices max out at 30 days of lease time to encourage turnover.
-  if (complex->is_office() && paid_until > time(0) + (SECS_PER_REAL_DAY * 30)) {
+  if (is_office() && paid_until > time(0) + (SECS_PER_REAL_DAY * 30)) {
     send_to_char(ch, "To encourage active use, public spaces like this can only be paid when they're at 29 days of remaining lease or lower.\r\n");
     return false;
   }
@@ -1625,13 +1663,17 @@ void Apartment::set_complex(ApartmentComplex *new_complex) {
 }
 
 void Apartment::clamp_rent(struct char_data *ch) {
+  // Offices are exempt.
+  if (is_office())
+    return;
+
   // Clamp the rent to the lifestyle's band.
   int lifestyle = get_lifestyle();
   long minimum = lifestyles[lifestyle].monthly_cost_min;
   long maximum = lifestyle < NUM_LIFESTYLES - 1 ? lifestyles[lifestyle + 1].monthly_cost_min : UINT_MAX;
 
   // No upper bound on office rents, but the lower bound is 5k.
-  if (complex->is_office()) {
+  if (is_office()) {
     minimum = 5000;
     maximum = UINT_MAX;
   }
@@ -1665,7 +1707,7 @@ bool Apartment::set_lifestyle(int new_lifestyle, struct char_data *ch) {
   }
 
   // Override offices, they don't obviate you leasing an actual apartment.
-  if (complex->is_office()) {
+  if (is_office()) {
     new_lifestyle = LIFESTYLE_SQUATTER;
   }
 

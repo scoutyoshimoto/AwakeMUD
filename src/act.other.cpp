@@ -125,7 +125,7 @@ ACMD(do_quit)
     if (GET_QUEST(ch))
       end_quest(ch, FALSE);
 
-    if (save_room && save_room->apartment && save_room->apartment->can_enter(ch) && !save_room->apartment->get_complex()->is_office()) {
+    if (save_room && save_room->apartment && save_room->apartment->can_enter(ch) && !save_room->apartment->is_office()) {
       // Only guests and owners can load back into an apartment; nobody can load back into an office.
       GET_LOADROOM(ch) = save_room->number;
     } else {
@@ -202,7 +202,11 @@ ACMD(do_sneak)
 
   FAILURE_CASE(GET_POS(ch) != POS_STANDING, "You must be standing to sneak.");
 
-  send_to_char("You begin to move with stealth.\r\n", ch);
+  if (AFF_FLAGGED(ch, AFF_LEVITATE) && !number(0, 10000)) {
+    send_to_char("You realize you've been making whooshing noises with your mouth while levitating around, so you concentrate on not doing that for a while.\r\n", ch);
+  } else {
+    send_to_char("You begin to move with stealth.\r\n", ch);
+  }
   AFF_FLAGS(ch).SetBit(AFF_SNEAK);
 }
 
