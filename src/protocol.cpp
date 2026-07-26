@@ -392,7 +392,12 @@ void ProtocolInput( descriptor_t *apDescriptor, char *apData, int aSize, char *a
   int IacIndex = 0;
   int Index;
 
-  protocol_t *pProtocol = apDescriptor ? apDescriptor->pProtocol : NULL;
+  if (!apDescriptor) {
+    mudlog_vfprintf(NULL, LOG_SYSLOG, "SYSERR: Got ProtocolInput with a NULL apDescriptor!");
+    return;
+  }
+
+  protocol_t *pProtocol = apDescriptor->pProtocol;
 
   for ( Index = 0; Index < aSize; ++Index )
   {
@@ -404,7 +409,7 @@ void ProtocolInput( descriptor_t *apDescriptor, char *apData, int aSize, char *a
     }
 
     /* IAC IAC is treated as a single value of 255 */
-    if ( apData[Index] == (char)IAC && apData[Index+1] == (char)IAC )
+    if ( Index + 1 < aSize && apData[Index] == (char)IAC && apData[Index+1] == (char)IAC )
     {
       if ( pProtocol->bIACMode )
         IacBuf[IacIndex++] = (char)IAC;
@@ -415,7 +420,7 @@ void ProtocolInput( descriptor_t *apDescriptor, char *apData, int aSize, char *a
     else if ( pProtocol->bIACMode )
     {
       /* End subnegotiation. */
-      if ( apData[Index] == (char)IAC && apData[Index+1] == (char)SE )
+      if ( Index + 1 < aSize && apData[Index] == (char)IAC && apData[Index+1] == (char)SE )
       {
         Index++;
         pProtocol->bIACMode = FALSE;
@@ -427,7 +432,7 @@ void ProtocolInput( descriptor_t *apDescriptor, char *apData, int aSize, char *a
       else
         IacBuf[IacIndex++] = apData[Index];
     }
-    else if ( apData[Index] == (char)27 && apData[Index+1] == '[' &&
+    else if ( Index + 3 < aSize && apData[Index] == (char)27 && apData[Index+1] == '[' &&
       isdigit(apData[Index+2]) && apData[Index+3] == 'z' )
     {
       char MXPBuffer [1024];
@@ -513,7 +518,7 @@ void ProtocolInput( descriptor_t *apDescriptor, char *apData, int aSize, char *a
     }
     else /* In-band command */
     {
-      if ( apData[Index] == (char)IAC )
+      if ( Index + 1 < aSize && apData[Index] == (char)IAC )
       {
         switch ( apData[Index+1] )
         {
@@ -526,8 +531,10 @@ void ProtocolInput( descriptor_t *apDescriptor, char *apData, int aSize, char *a
           case (char)DONT:
           case (char)WILL:
           case (char)WONT:
-            PerformHandshake( apDescriptor, apData[Index+1], apData[Index+2] );
-            Index += 2;
+            if (Index + 2 < aSize) {
+              PerformHandshake( apDescriptor, apData[Index+1], apData[Index+2] );
+              Index += 2;
+            }
             break;
 
           case (char)IAC: /* Two IACs count as one. */
@@ -2841,8 +2848,8 @@ static void ExecuteMSDPPair( descriptor_t *apDescriptor, const char *apVariable,
                     if ( isprint(*apValue) )
                       pBuffer[j++] = *apValue;
                   }
+                  pBuffer[j++] = '\0';
                 }
-                pBuffer[j++] = '\0';
 
                 if ( j >= VariableNameTable[i].Min )
                 {
