@@ -32,7 +32,6 @@
 #include "gmcp.hpp"
 
 /* external functs */
-int special(struct char_data * ch, int cmd, char *arg);
 void death_cry(struct char_data * ch, idnum_t cause_of_death_idnum);
 bool perform_fall(struct char_data *);
 bool check_fall(struct char_data *, int, bool need_to_send_fall_message);
@@ -78,6 +77,12 @@ int can_move(struct char_data *ch, int dir, int extra)
   char empty_argument = '\0';
   if (IS_SET(extra, CHECK_SPECIAL) && special(ch, convert_dir[dir], &empty_argument))
     return 0;
+
+  // Require that the exit exists.
+  if (ch->in_room && (!ch->in_room->dir_option || !ch->in_room->dir_option[dir]->to_room)) {
+    send_to_char("You cannot go that way...\r\n", ch);
+    return 0;
+  }
 
   if (ch->in_room && ch->in_room->icesheet[0] && !IS_ASTRAL(ch) && !IS_AFFECTED(ch, AFF_LEVITATE)) {
     if (FIGHTING(ch) && success_test(GET_QUI(ch), ch->in_room->icesheet[0] + modify_target(ch)) < 1)
