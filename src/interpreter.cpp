@@ -66,7 +66,6 @@ extern int restrict_mud;
 void echo_on(struct descriptor_data * d);
 void echo_off(struct descriptor_data * d);
 void do_start(struct char_data * ch, bool wipe_skills);
-int special(struct char_data * ch, int cmd, char *arg);
 int isbanned(char *hostname);
 void init_create_vars(struct descriptor_data *d);
 // for olc
@@ -727,7 +726,7 @@ struct command_info cmd_info[] =
     { "gecho"      , POS_DEAD    , do_gecho    , LVL_CONSPIRATOR, 0, BLOCKS_IDLE_REWARD },
     { "give"       , POS_RESTING , do_give     , 0, 0, BLOCKS_IDLE_REWARD },
     { "goto"       , POS_MORTALLYW, do_goto     , LVL_BUILDER, 0, BLOCKS_IDLE_REWARD },
-    { "group"      , POS_RESTING , do_group    , 1, 0, BLOCKS_IDLE_REWARD },
+    { "group"      , POS_MORTALLYW , do_group    , 1, 0, BLOCKS_IDLE_REWARD },
     { "grab"       , POS_RESTING , do_grab     , 0, 0, BLOCKS_IDLE_REWARD },
     { "gridguide"  , POS_RESTING , do_gridguide, 0, 0, BLOCKS_IDLE_REWARD },
 
