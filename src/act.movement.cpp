@@ -79,7 +79,7 @@ int can_move(struct char_data *ch, int dir, int extra)
     return 0;
 
   // Require that the exit exists.
-  if (ch->in_room && (!ch->in_room->dir_option || !ch->in_room->dir_option[dir]->to_room)) {
+  if (ch->in_room && (!ch->in_room->dir_option[dir] || !ch->in_room->dir_option[dir]->to_room)) {
     send_to_char("You cannot go that way...\r\n", ch);
     return 0;
   }
