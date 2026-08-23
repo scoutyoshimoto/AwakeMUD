@@ -543,6 +543,7 @@ void elemental_fulfilled_services(struct char_data *ch, struct char_data *mob, s
   if (spirit->services < 1 && !(MOB_FLAGGED(mob, MOB_SPIRITGUARD) || MOB_FLAGGED(mob, MOB_STUDY) || GET_SUSTAINED(mob) || GET_SUSTAINED_NUM(mob) || CH_IN_COMBAT(mob)))
   {
     send_to_char(ch, "Its services fulfilled, %s departs to the metaplanes.\r\n", CAP(GET_NAME(mob)));
+    GET_ELEMENTALS_DIRTY_BIT(ch) = TRUE;
     delete_spirit_or_elemental_from_entry(ch, spirit);
   }
 }
@@ -3382,13 +3383,18 @@ ACMD(do_contest)
   int casuc = success_test(caskill, tn);
   struct spirit_data *temp;
   if (chsuc < 1 && casuc < 1) {
-    for (struct spirit_data *sdata = GET_SPIRIT(caster); sdata; sdata = sdata->next)
+    for (struct spirit_data *sdata = GET_SPIRIT(caster); sdata; sdata = sdata->next) {
       if (sdata->id == GET_GRADE(mob)) {
         REMOVE_FROM_LIST(sdata, GET_SPIRIT(caster), next);
         delete sdata;
         break;
       }
-    GET_ELEMENTALS_DIRTY_BIT(ch) = TRUE;
+    }
+    
+    // Cleanup
+    GET_ELEMENTALS_DIRTY_BIT(caster) = TRUE;
+    GET_NUM_SPIRITS(caster)--;
+
     if (GET_MOB_VNUM(mob) < 25 || GET_MOB_VNUM(mob) > 28) {
       act("$n senses an opportunity and vanishes!", TRUE, mob, 0, 0, TO_ROOM);
       extract_char(mob);
@@ -3397,10 +3403,6 @@ ACMD(do_contest)
       act("$n becomes uncontrolled!", TRUE, mob, 0, 0, TO_ROOM);
       GET_ACTIVE(mob) = 0;
     }
-    if (conjuring_drain(caster, GET_LEVEL(mob)))
-      return;
-    if (conjuring_drain(ch, GET_LEVEL(mob)))
-      return;
   } else if (chsuc > casuc) {
     send_to_char(ch, "You steal control of %s!\r\n", GET_NAME(mob));
     snprintf(buf, sizeof(buf), "$n steals control of %s!", GET_NAME(mob));
@@ -3418,17 +3420,19 @@ ACMD(do_contest)
         break;
       }
     GET_ACTIVE(mob) = GET_IDNUM(ch);
-    if (conjuring_drain(caster, GET_LEVEL(mob)))
-      return;
-    if (conjuring_drain(ch, GET_LEVEL(mob)))
-      return;
   } else {
     send_to_char("You fail to gain control!\r\n", ch);
     snprintf(buf, sizeof(buf), "$n tries to steal control of %s!", GET_NAME(mob));
     act(buf, FALSE, ch, 0, caster, TO_VICT);
-    if (conjuring_drain(ch, GET_LEVEL(mob)))
-      return;
   }
+
+  // We want to apply drain damage to both the caster and the ch even if one or both dies, so we do this janky method of damaging and returning.
+  if (conjuring_drain(caster, GET_LEVEL(mob)))
+    caster = nullptr;
+  if (conjuring_drain(ch, GET_LEVEL(mob)))
+    ch = nullptr;
+  if (!ch || !caster)
+    return;
 }
 ACMD(do_unbond)
 {
@@ -3776,10 +3780,11 @@ ACMD(do_release)
           send_to_char(ch, "You release %s from its obligations and it departs to the metaplanes.\r\n",
                        (real_mob = real_mobile(elements[spirit->type].vnum)) >= 0 ? GET_NAME(&mob_proto[real_mob]) : "an elemental");
         }
-        else
+        else {
           send_to_char(ch, "You release %s from its obligations and it departs to the metaplanes.\r\n",
                        (real_mob = real_mobile(spirits[spirit->type].vnum)) >= 0 ? GET_NAME(&mob_proto[real_mob]) : "a spirit");
-
+        }
+        GET_ELEMENTALS_DIRTY_BIT(ch) = TRUE;
         delete_spirit_or_elemental_from_entry(ch, spirit);
         return;
       }
