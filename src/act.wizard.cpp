@@ -326,23 +326,27 @@ void execute_copyover() {
     // Refund services for sustained spells: iterate through characters on the descriptor
     for (struct char_data *ch_ptr = och; ch_ptr; ch_ptr = (ch_ptr == d->character ? d->original : nullptr)) {
       // iterate through their sustains
-      for (struct sustain_data *sust = ch_ptr->sustained; sust; sust = sust->next) {
-        // Skip spells cast on them, and spells that aren't sustained by a spirit.
-        if (!sust->is_caster_record || !sust->spirit)
-          continue;
+      if (GET_TRADITION(ch_ptr) == TRAD_HERMETIC) {
+        for (struct sustain_data *sust = ch_ptr->sustained; sust; sust = sust->next) {
+          // Skip spells cast on them, and spells that aren't sustained by a spirit.
+          if (!sust->is_caster_record || !sust->spirit)
+            continue;
 
-        // Spell is sustained by a spirit; iterate through your spiritdata to find it
-        for (struct spirit_data *spiritdata = GET_SPIRIT(ch_ptr); spiritdata; spiritdata = spiritdata->next) {
-          if (spiritdata->id == GET_GRADE(sust->spirit)) {
-            // Found it. Add one to the services and bail.
-            mudlog_vfprintf(ch_ptr, LOG_SYSLOG, "Adding 1 service to %s's spirit record #%d (f%d-%d) from sustained %s.",
-                            GET_CHAR_NAME(ch_ptr),
-                            spiritdata->id,
-                            spiritdata->force,
-                            spiritdata->type,
-                            spells[sust->spell].name);
-            spiritdata->services++;
-            break;
+          // Spell is sustained by a spirit; iterate through your spiritdata to find it
+          for (struct spirit_data *spiritdata = GET_SPIRIT(ch_ptr); spiritdata; spiritdata = spiritdata->next) {
+            if (spiritdata->id == GET_GRADE(sust->spirit)) {
+              // Found it. Add one to the services and bail.
+              mudlog_vfprintf(ch_ptr, LOG_SYSLOG, "Adding 1 service to %s's spirit record #%d (f%d-%d) from sustained %s.",
+                              GET_CHAR_NAME(ch_ptr),
+                              spiritdata->id,
+                              spiritdata->force,
+                              spiritdata->type,
+                              spells[sust->spell].name);
+              spiritdata->services++;
+              // Set the dirty bit here so the service data is saved to DB.
+              GET_ELEMENTALS_DIRTY_BIT(ch_ptr) = true;
+              break;
+            }
           }
         }
       }
